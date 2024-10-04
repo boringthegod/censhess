@@ -6,6 +6,7 @@ import time
 import sys
 import os
 import argparse
+import contextlib
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Censhess')
@@ -41,7 +42,7 @@ def remove_duplicates(file_path):
                 seen.add(ip)
     os.replace(file_path + '.tmp', file_path)
 
-def process_domain(domain):
+def process_domain(domain, ips_output_file):
     domain = domain.strip()
     max_retries = 3
     for attempt in range(max_retries):
@@ -67,7 +68,7 @@ def process_domain(domain):
                 'q': domain,
             }
 
-            response = requests.get('https://search.censys.io/_search', params=params, headers=headers, proxies=proxies, timeout=30, impersonate="chrome")
+            response = requests.get('https://search.censys.io/_search', params=params, headers=headers, proxies=proxies, timeout=15, impersonate="chrome")
 
             ipv4_addresses = ipv4_pattern.findall(response.text)
 
@@ -79,7 +80,8 @@ def process_domain(domain):
             break
 
         except Exception as e:
-            print(f"Error processing {domain} on attempt {attempt + 1}: {e}")
+            with contextlib.redirect_stderr(open(os.devnull, 'w')):
+                print(f"Error processing {domain} on attempt {attempt + 1}: {e}")
             if attempt < max_retries - 1:
                 print(f"Retrying {domain}...")
                 time.sleep(2)
@@ -94,7 +96,7 @@ def main():
         domains = file.readlines()
 
     with ThreadPoolExecutor(max_workers=10) as executor:
-        executor.map(process_domain, domains)
+        executor.map(lambda domain: process_domain(domain, args.ips_output_file), domains)
 
     remove_duplicates(args.ips_output_file)
 
@@ -105,7 +107,7 @@ if __name__ == "__main__":
     ipv4_pattern = re.compile(r'<strong>(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})</strong>')
     lock = Lock()
     proxies = {
-        "http": "socks5:YOUR_PROXY//",
-        "https": "socks5:YOUR_PROXY//"
+        "http": "socks5://",
+        "https": "socks5://"
     }
     main()
