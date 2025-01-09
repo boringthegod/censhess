@@ -68,7 +68,7 @@ def process_domain(domain, ips_output_file):
                 'q': domain,
             }
 
-            response = requests.get('https://search.censys.io/_search', params=params, headers=headers, proxies=proxies, timeout=15, impersonate="chrome")
+            response = requests.get('https://search.censys.io/_search', params=params, headers=headers, proxies=proxies, timeout=15, impersonate="safari17_0")
 
             ipv4_addresses = ipv4_pattern.findall(response.text)
 
